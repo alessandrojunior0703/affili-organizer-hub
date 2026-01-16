@@ -12,7 +12,7 @@ interface ProductCardProps {
   onClick: (product: Product) => void;
 }
 
-const storeConfig = {
+const storeConfig: Record<string, { label: string; className: string }> = {
   amazon: {
     label: 'Amazon',
     className: 'bg-amazon text-amazon-foreground',
@@ -21,14 +21,28 @@ const storeConfig = {
     label: 'Shopee',
     className: 'bg-shopee text-shopee-foreground',
   },
+  mercadolivre: {
+    label: 'Mercado Livre',
+    className: 'bg-yellow-500 text-black',
+  },
+  magalu: {
+    label: 'Magalu',
+    className: 'bg-blue-600 text-white',
+  },
+  aliexpress: {
+    label: 'AliExpress',
+    className: 'bg-red-600 text-white',
+  },
   other: {
     label: 'Outra',
     className: 'bg-muted text-muted-foreground',
   },
 };
 
+const defaultStore = { label: 'Loja', className: 'bg-muted text-muted-foreground' };
+
 export const ProductCard = ({ product, onEdit, onDelete, onClick }: ProductCardProps) => {
-  const store = storeConfig[product.store];
+  const store = storeConfig[product.store] ?? defaultStore;
 
   return (
     <Card

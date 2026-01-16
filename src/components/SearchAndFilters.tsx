@@ -61,7 +61,7 @@ export const SearchAndFilters = ({
         <Select
           value={filters.store}
           onValueChange={(value) =>
-            onFiltersChange({ ...filters, store: value as FilterOptions['store'] })
+            onFiltersChange({ ...filters, store: value })
           }
         >
           <SelectTrigger className="w-full lg:w-40">
@@ -71,6 +71,9 @@ export const SearchAndFilters = ({
             <SelectItem value="all">Todas as Lojas</SelectItem>
             <SelectItem value="amazon">Amazon</SelectItem>
             <SelectItem value="shopee">Shopee</SelectItem>
+            <SelectItem value="mercadolivre">Mercado Livre</SelectItem>
+            <SelectItem value="magalu">Magalu</SelectItem>
+            <SelectItem value="aliexpress">AliExpress</SelectItem>
             <SelectItem value="other">Outras</SelectItem>
           </SelectContent>
         </Select>
