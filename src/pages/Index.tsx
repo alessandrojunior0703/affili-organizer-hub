@@ -11,7 +11,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { Product } from '@/types/product';
 
 const Index = () => {
-  const { products, filters, setFilters, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, filters, setFilters, addProduct, updateProduct, deleteProduct, isLoading, error } = useProducts();
   
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -44,22 +44,34 @@ const Index = () => {
     setDeleteOpen(true);
   };
 
-  const handleFormSubmit = (data: any) => {
+  const handleFormSubmit = async (data: any) => {
     if (editingProduct) {
-      updateProduct(editingProduct.id, data);
-      toast.success('Produto atualizado com sucesso!');
+      const updated = await updateProduct(editingProduct.id, data);
+      if (updated) {
+        toast.success('Produto atualizado com sucesso!');
+      } else {
+        toast.error('Nao foi possivel atualizar o produto.');
+      }
     } else {
-      addProduct(data);
-      toast.success('Produto adicionado com sucesso!');
+      const created = await addProduct(data);
+      if (created) {
+        toast.success('Produto adicionado com sucesso!');
+      } else {
+        toast.error('Nao foi possivel adicionar o produto.');
+      }
     }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deleteProduct_) {
-      deleteProduct(deleteProduct_.id);
-      toast.success('Produto excluído com sucesso!');
-      setDeleteOpen(false);
-      setDeleteProduct(null);
+      const ok = await deleteProduct(deleteProduct_.id);
+      if (ok) {
+        toast.success('Produto excluido com sucesso!');
+        setDeleteOpen(false);
+        setDeleteProduct(null);
+      } else {
+        toast.error('Nao foi possivel excluir o produto.');
+      }
     }
   };
 
@@ -74,7 +86,15 @@ const Index = () => {
           onAddProduct={handleAddProduct}
         />
 
-        {products.length === 0 ? (
+        {isLoading && (
+          <p className="text-sm text-muted-foreground">Carregando produtos...</p>
+        )}
+
+        {error && (
+          <p className="text-sm text-destructive">Erro ao carregar produtos: {error}</p>
+        )}
+
+        {products.length === 0 && !isLoading ? (
           <EmptyState onAddProduct={handleAddProduct} hasFilters={hasActiveFilters} />
         ) : (
           <>

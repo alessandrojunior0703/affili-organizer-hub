@@ -60,6 +60,49 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Supabase (banco de dados)
+
+Este projeto foi preparado para usar Supabase via variaveis de ambiente do Vite.
+
+1) Crie um arquivo `.env.local` na raiz do projeto com:
+
+```sh
+VITE_SUPABASE_URL=seu_url_do_supabase
+VITE_SUPABASE_ANON_KEY=sua_anon_key
+```
+
+2) Crie a tabela `products` no Supabase (SQL sugerido):
+
+```sql
+create table if not exists public.products (
+  id uuid primary key,
+  name text not null,
+  description text not null,
+  price numeric not null,
+  original_price numeric,
+  discount numeric,
+  commission numeric,
+  image_url text not null,
+  affiliate_link text not null,
+  store text not null check (store in ('amazon','shopee','other')),
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+alter table public.products enable row level security;
+
+create policy "anon read products"
+  on public.products for select
+  to anon
+  using (true);
+
+create policy "anon write products"
+  on public.products for insert, update, delete
+  to anon
+  using (true)
+  with check (true);
+```
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.

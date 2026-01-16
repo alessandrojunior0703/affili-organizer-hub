@@ -1,19 +1,37 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Product, FilterOptions, SortOption } from '@/types/product';
+import { fetchProducts, insertProduct, insertProducts, updateProductById, deleteProductById } from '@/lib/productsApi';
 
 const STORAGE_KEY = 'affiliate-products';
+const MIGRATION_KEY = 'affiliate-products-migrated';
+
+const canUseStorage = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 
 const getStoredProducts = (): Product[] => {
+  if (!canUseStorage()) {
+    return [];
+  }
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    return stored ? (JSON.parse(stored) as Product[]) : [];
   } catch {
     return [];
   }
 };
 
-const saveProducts = (products: Product[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+const clearStoredProducts = () => {
+  if (!canUseStorage()) {
+    return;
+  }
+  localStorage.removeItem(STORAGE_KEY);
+};
+
+const wasMigrated = () => canUseStorage() && localStorage.getItem(MIGRATION_KEY) === 'true';
+const markMigrated = () => {
+  if (!canUseStorage()) {
+    return;
+  }
+  localStorage.setItem(MIGRATION_KEY, 'true');
 };
 
 export const detectStore = (link: string): 'amazon' | 'shopee' | 'other' => {
@@ -29,6 +47,8 @@ export const detectStore = (link: string): 'amazon' | 'shopee' | 'other' => {
 
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterOptions>({
     search: '',
     store: 'all',
@@ -36,10 +56,37 @@ export const useProducts = () => {
   });
 
   useEffect(() => {
-    setProducts(getStoredProducts());
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchProducts();
+        if (!wasMigrated()) {
+          const stored = getStoredProducts();
+          if (stored.length > 0) {
+            await insertProducts(stored);
+            clearStoredProducts();
+            markMigrated();
+            const refreshed = await fetchProducts();
+            setProducts(refreshed);
+            setError(null);
+            return;
+          }
+          markMigrated();
+        }
+
+        setProducts(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Falha ao carregar produtos.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void load();
   }, []);
 
-  const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'store'>) => {
+  const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'store'>) => {
     const newProduct: Product = {
       ...productData,
       id: crypto.randomUUID(),
@@ -47,31 +94,53 @@ export const useProducts = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const updated = [...products, newProduct];
-    setProducts(updated);
-    saveProducts(updated);
-    return newProduct;
+    setIsLoading(true);
+    try {
+      const inserted = await insertProduct(newProduct);
+      setProducts((prev) => [...prev, inserted]);
+      setError(null);
+      return inserted;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao adicionar produto.');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateProduct = (id: string, productData: Partial<Omit<Product, 'id' | 'createdAt'>>) => {
-    const updated = products.map((p) =>
-      p.id === id
-        ? {
-            ...p,
-            ...productData,
-            store: productData.affiliateLink ? detectStore(productData.affiliateLink) : p.store,
-            updatedAt: new Date().toISOString(),
-          }
-        : p
-    );
-    setProducts(updated);
-    saveProducts(updated);
+  const updateProduct = async (id: string, productData: Partial<Omit<Product, 'id' | 'createdAt'>>) => {
+    const updatePayload: Partial<Product> = {
+      ...productData,
+      store: productData.affiliateLink ? detectStore(productData.affiliateLink) : undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    setIsLoading(true);
+    try {
+      const updated = await updateProductById(id, updatePayload);
+      setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      setError(null);
+      return updated;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao atualizar produto.');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const deleteProduct = (id: string) => {
-    const updated = products.filter((p) => p.id !== id);
-    setProducts(updated);
-    saveProducts(updated);
+  const deleteProduct = async (id: string) => {
+    setIsLoading(true);
+    try {
+      await deleteProductById(id);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setError(null);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao excluir produto.');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filteredProducts = useMemo(() => {
@@ -127,6 +196,8 @@ export const useProducts = () => {
   return {
     products: filteredProducts,
     allProducts: products,
+    isLoading,
+    error,
     filters,
     setFilters,
     addProduct,
