@@ -11,7 +11,7 @@ type DbProduct = {
   commission: number | null;
   image_url: string;
   affiliate_link: string;
-  store: 'amazon' | 'shopee' | 'other';
+  store: string;
   created_at: string;
   updated_at: string;
 };

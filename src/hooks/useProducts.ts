@@ -34,13 +34,22 @@ const markMigrated = () => {
   localStorage.setItem(MIGRATION_KEY, 'true');
 };
 
-export const detectStore = (link: string): 'amazon' | 'shopee' | 'other' => {
+export const detectStore = (link: string): string => {
   const lowerLink = link.toLowerCase();
   if (lowerLink.includes('amazon') || lowerLink.includes('amzn')) {
     return 'amazon';
   }
   if (lowerLink.includes('shopee')) {
     return 'shopee';
+  }
+  if (lowerLink.includes('mercadolivre') || lowerLink.includes('mercadolibre')) {
+    return 'mercadolivre';
+  }
+  if (lowerLink.includes('magalu') || lowerLink.includes('magazineluiza')) {
+    return 'magalu';
+  }
+  if (lowerLink.includes('aliexpress')) {
+    return 'aliexpress';
   }
   return 'other';
 };

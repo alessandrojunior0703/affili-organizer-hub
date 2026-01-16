@@ -8,7 +8,7 @@ export interface Product {
   commission?: number;
   imageUrl: string;
   affiliateLink: string;
-  store: 'amazon' | 'shopee' | 'other';
+  store: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,7 +17,7 @@ export type SortOption = 'price-asc' | 'price-desc' | 'commission-asc' | 'commis
 
 export interface FilterOptions {
   search: string;
-  store: 'all' | 'amazon' | 'shopee' | 'other';
+  store: string;
   minPrice?: number;
   maxPrice?: number;
   minDiscount?: number;
